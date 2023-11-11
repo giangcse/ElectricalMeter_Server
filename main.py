@@ -38,7 +38,8 @@ client = pymongo.MongoClient(f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWOR
 db = client['ElectricalMeter']
 e_log = db['ChiSoDien']
 # Model for upload
-# class UploadModel
+class UploadModel(BaseModel):
+    image: str
 
 # Upload endpoint
 @app.post('/upload')
@@ -58,8 +59,8 @@ async def upload(file: UploadFile = File(...)):
     
 # Upload endpoint
 @app.post('/upload_base64')
-async def upload(image: str):
-    save_to_db = e_log.insert_one({'image': image})
+async def upload(upload: UploadModel):
+    save_to_db = e_log.insert_one({'image': upload.image})
     if save_to_db.acknowledged:
         return JSONResponse(status_code=200, content="Uploaded")
     else:
