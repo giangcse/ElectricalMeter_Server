@@ -55,3 +55,12 @@ async def upload(file: UploadFile = File(...)):
         return JSONResponse(status_code=200, content="Uploaded")
     else:
         return JSONResponse(status_code=500, content="Database server error")
+    
+# Upload endpoint
+@app.post('/upload_base64')
+async def upload(image: str):
+    save_to_db = e_log.insert_one({'image': image})
+    if save_to_db.acknowledged:
+        return JSONResponse(status_code=200, content="Uploaded")
+    else:
+        return JSONResponse(status_code=500, content="Database server error")
