@@ -39,7 +39,7 @@ db = client['ElectricalMeter']
 e_log = db['ChiSoDien']
 # Model for upload
 class UploadModel(BaseModel):
-    mac_addres: str
+    mac: str
     image: str
 
 # Upload endpoint
@@ -61,7 +61,7 @@ async def upload(file: UploadFile = File(...)):
 # Upload endpoint
 @app.post('/upload_base64')
 async def upload(upload: UploadModel):
-    save_to_db = e_log.insert_one({'mac': upload.mac_addres, 'image': upload.image})
+    save_to_db = e_log.insert_one({'mac': upload.mac, 'image': upload.image})
     if save_to_db.acknowledged:
         return JSONResponse(status_code=200, content="Uploaded")
     else:
