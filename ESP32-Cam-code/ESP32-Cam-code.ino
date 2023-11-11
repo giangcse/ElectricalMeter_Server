@@ -174,7 +174,7 @@ void setup() {
 
 void loop() {
   static unsigned long lastCaptureTime = 0;
-  const unsigned long captureInterval = 60000; // 60 seconds
+  const unsigned long captureInterval = 60000*15; // 60 seconds
 
   if (takeNewPhoto) {
     capturePhotoSaveSpiffs();
@@ -240,6 +240,18 @@ void capturePhotoSaveSpiffs( void ) {
 }
 
 void sendPhotoToServer() {
+
+  // Get MAC address of the ESP32
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+
+  // Convert MAC address to a string
+  String macAddress;
+  for (int i = 0; i < 6; ++i) {
+    macAddress += String(mac[i], 16);
+    if (i < 5) macAddress += ":";
+  }
+  
   // Specify the server address and endpoint
   String url = "http://" + String(serverAddress) + ":" + String(serverPort) + "/upload_base64";
 
@@ -267,7 +279,7 @@ void sendPhotoToServer() {
     String base64Image = base64::encode(fileBuffer, fileSize);
 
     // Create a JSON payload
-    String payload = "{\"image\":\"data:image/jpeg;base64," + base64Image + "\"}";
+    String payload = "{\"mac\":\"" + macAddress + "\",\"image\":\"data:image/jpeg;base64," + base64Image + "\"}";
 
     // Send the POST request with the JSON payload
     int httpCode = http.POST(payload);
