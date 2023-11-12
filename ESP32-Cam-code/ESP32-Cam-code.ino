@@ -12,6 +12,7 @@
 #include <FS.h>
 #include <HTTPClient.h>
 #include <Base64.h>
+#include <TimeLib.h>
 
 // Replace with your network credentials
 const char* ssid = "No-wifi";
@@ -157,6 +158,8 @@ void setup() {
 
   server.on("/capture", HTTP_GET, [](AsyncWebServerRequest * request) {
     takeNewPhoto = true;
+    capturePhotoSaveSpiffs();
+    sendPhotoToServer();
     request->send_P(200, "text/plain", "Taking Photo");
   });
 
@@ -191,6 +194,12 @@ void loop() {
   delay(1);
 }
 
+// Function to get current Unix timestamp
+unsigned long getUnixTimestamp() {
+  time_t now;
+  time(&now);
+  return now;
+}
 
 // Check if photo capture was successful
 bool checkPhoto( fs::FS &fs ) {
@@ -279,7 +288,7 @@ void sendPhotoToServer() {
     String base64Image = base64::encode(fileBuffer, fileSize);
 
     // Create a JSON payload
-    String payload = "{\"mac\":\"" + macAddress + "\",\"image\":\"data:image/jpeg;base64," + base64Image + "\"}";
+    String payload = "{\"mac\":\"" + macAddress + "\",\"ip\":\"" + WiFi.localIP().toString().c_str() + "\",\"image\":\"" + base64Image + "\"}";
 
     // Send the POST request with the JSON payload
     int httpCode = http.POST(payload);
