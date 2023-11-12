@@ -63,7 +63,7 @@ async def upload(file: UploadFile = File(...)):
 # Upload endpoint
 @app.post('/upload_base64')
 async def upload(upload: UploadModel):
-    save_to_db = e_log.insert_one({'mac': upload.mac, 'ip': upload.ip, 'image': upload.image, 'createdAt': round(datetime.datetime.now().fromtimestamp())})
+    save_to_db = e_log.insert_one({'mac': upload.mac, 'ip': upload.ip, 'image': upload.image, 'createdAt': round(datetime.datetime.now().timestamp())})
     if save_to_db.acknowledged:
         return JSONResponse(status_code=200, content="Uploaded")
     else:
