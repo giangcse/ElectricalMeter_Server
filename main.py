@@ -8,8 +8,8 @@ from pydantic import BaseModel
 import pymongo
 import os
 import shutil
-import base64
 import datetime
+import base64
 
 # Load .env
 dotenv_path = Path('.env')
@@ -43,7 +43,6 @@ class UploadModel(BaseModel):
     mac: str
     ip: str
     image: str
-    createdAt: datetime
 
 # Upload endpoint
 @app.post('/upload')
@@ -64,7 +63,7 @@ async def upload(file: UploadFile = File(...)):
 # Upload endpoint
 @app.post('/upload_base64')
 async def upload(upload: UploadModel):
-    save_to_db = e_log.insert_one({'mac': upload.mac, 'ip': upload.ip, 'image': upload.image, 'createdAt': upload.createdAt})
+    save_to_db = e_log.insert_one({'mac': upload.mac, 'ip': upload.ip, 'image': upload.image, 'createdAt': round(datetime.datetime.now().fromtimestamp())})
     if save_to_db.acknowledged:
         return JSONResponse(status_code=200, content="Uploaded")
     else:

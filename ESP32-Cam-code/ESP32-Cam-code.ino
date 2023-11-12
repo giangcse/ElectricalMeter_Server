@@ -12,7 +12,6 @@
 #include <FS.h>
 #include <HTTPClient.h>
 #include <Base64.h>
-#include <TimeLib.h>
 
 // Replace with your network credentials
 const char* ssid = "No-wifi";
@@ -194,12 +193,6 @@ void loop() {
   delay(1);
 }
 
-// Function to get current Unix timestamp
-unsigned long getUnixTimestamp() {
-  time_t now;
-  time(&now);
-  return now;
-}
 
 // Check if photo capture was successful
 bool checkPhoto( fs::FS &fs ) {
