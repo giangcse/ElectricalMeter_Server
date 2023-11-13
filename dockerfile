@@ -9,4 +9,4 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 EXPOSE 10000
 
-CMD [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000", "--worker", "2" ]
+CMD [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000", "--workers", "2" ]
