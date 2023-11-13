@@ -14,10 +14,10 @@
 #include <Base64.h>
 
 // Replace with your network credentials
-const char* ssid = "No-wifi";
-const char* password = "Tumottoibon";
-const char* serverAddress = "10.10.1.23";
-const int serverPort = 81;
+const char* ssid = "52Hz";
+const char* password = "Khongcodat";
+const char* serverAddress = "https://electrical-meter-server.onrender.com";
+//const int serverPort = 81;
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -255,7 +255,7 @@ void sendPhotoToServer() {
   }
   
   // Specify the server address and endpoint
-  String url = "http://" + String(serverAddress) + ":" + String(serverPort) + "/upload_base64";
+  String url = String(serverAddress) + "/upload_base64";
 
   // Create an HTTP object
   HTTPClient http;
