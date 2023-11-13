@@ -6,22 +6,24 @@
 #include "soc/soc.h"           // Disable brownour problems
 #include "soc/rtc_cntl_reg.h"  // Disable brownour problems
 #include "driver/rtc_io.h"
-#include <ESPAsyncWebServer.h>
 #include <StringArray.h>
 #include <SPIFFS.h>
 #include <FS.h>
 #include <HTTPClient.h>
 #include <Base64.h>
+#include <WiFiManager.h>
+#include <PubSubClient.h>
 
-// Replace with your network credentials
-const char* ssid = "52Hz";
-const char* password = "Khongcodat";
-const char* serverAddress = "https://electrical-meter-server.onrender.com";
-//const int serverPort = 81;
+const String url = "https://electrical-meter-server.onrender.com/upload_base64";
+const char* mqtt_server = "115.76.66.88";
+const int mqtt_port = 1883;
+const char* mqtt_user = "giang";
+const char* mqtt_password = "giang";
+const char* mqtt_topic_capture = "esp32_cam_2F4A58/capture";
+const char* mqtt_topic_info = "esp32_cam_2F4A58/info";
 
-// Create AsyncWebServer object on port 80
-AsyncWebServer server(80);
-
+WiFiClient espClient;
+PubSubClient client(espClient);
 boolean takeNewPhoto = false;
 
 // Photo File Name to save in SPIFFS
@@ -45,56 +47,72 @@ boolean takeNewPhoto = false;
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
 
-const char index_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML><html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { text-align:center; }
-    .vert { margin-bottom: 10%; }
-    .hori{ margin-bottom: 0%; }
-  </style>
-</head>
-<body>
-  <div id="container">
-    <h2>ESP32-CAM Last Photo</h2>
-    <p>It might take more than 5 seconds to capture a photo.</p>
-    <p>
-      <button onclick="rotatePhoto();">ROTATE</button>
-      <button onclick="capturePhoto()">CAPTURE PHOTO</button>
-      <button onclick="location.reload();">REFRESH PAGE</button>
-    </p>
-  </div>
-  <div><img src="saved-photo" id="photo" width="70%"></div>
-</body>
-<script>
-  var deg = 0;
-  function capturePhoto() {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', "/capture", true);
-    xhr.send();
+void callback(char* topic, byte* payload, unsigned int length) {
+  // Handle incoming MQTT messages
+  String command = "";
+  for (int i = 0; i < length; i++) {
+    command += (char)payload[i];
   }
-  function rotatePhoto() {
-    var img = document.getElementById("photo");
-    deg += 90;
-    if(isOdd(deg/90)){ document.getElementById("container").className = "vert"; }
-    else{ document.getElementById("container").className = "hori"; }
-    img.style.transform = "rotate(" + deg + "deg)";
+
+  if (command.equals("capture")) {
+    takeNewPhoto = true;
   }
-  function isOdd(n) { return Math.abs(n % 2) == 1; }
-</script>
-</html>)rawliteral";
+}
+
+void sendDeviceInfo() {
+  // Get MAC address of the ESP32
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+
+  // Convert MAC address to a string
+  String macAddress;
+  for (int i = 0; i < 6; ++i) {
+    macAddress += String(mac[i], 16);
+    if (i < 5) macAddress += ":";
+  }
+
+  // Create JSON payload for device info
+  String payload = "{\"mac\":\"" + macAddress + "\",\"ip\":\"" + WiFi.localIP().toString().c_str() + "\"}";
+
+  // Publish the device info to the MQTT topic
+  client.publish(mqtt_topic_info, payload.c_str());
+}
+
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    if (client.connect("ESP32-Cam", mqtt_user, mqtt_password)) {
+      Serial.println("connected");
+      client.subscribe(mqtt_topic_capture);
+
+      // Send device info upon successful connection
+      sendDeviceInfo();
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
 
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
 
   // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
+  WiFiManager wm;
+  
+  bool res;
+  res = wm.autoConnect("ESP32-Cam", "12345678");
+  if (!res) {
+    Serial.println("Failed to connect");
+    ESP.restart();
+  } else {
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
   }
+
   if (!SPIFFS.begin(true)) {
     Serial.println("An Error has occurred while mounting SPIFFS");
     ESP.restart();
@@ -104,10 +122,7 @@ void setup() {
     Serial.println("SPIFFS mounted successfully");
   }
 
-  // Print ESP32 Local IP Address
-  Serial.print("IP Address: http://");
-  Serial.println(WiFi.localIP());
-
+  SPIFFS.format();
   // Turn-off the 'brownout detector'
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
@@ -150,36 +165,24 @@ void setup() {
     ESP.restart();
   }
 
-  // Route for root / web page
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send_P(200, "text/html", index_html);
-  });
-
-  server.on("/capture", HTTP_GET, [](AsyncWebServerRequest * request) {
-    takeNewPhoto = true;
-    capturePhotoSaveSpiffs();
-    sendPhotoToServer();
-    request->send_P(200, "text/plain", "Taking Photo");
-  });
-
-  server.on("/saved-photo", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send(SPIFFS, FILE_PHOTO, "image/jpg", false);
-  });
-
-  // Start server
-  server.begin();
-
-  // Function prototypes
-  sendPhotoToServer();
-
+  // Connect to MQTT
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(callback);
 }
 
 void loop() {
+  // Handle MQTT connections
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+  
   static unsigned long lastCaptureTime = 0;
-  const unsigned long captureInterval = 60000*15; // 60 seconds
+  const unsigned long captureInterval = 60000*5; // 60 seconds
 
   if (takeNewPhoto) {
     capturePhotoSaveSpiffs();
+    sendPhotoToServer();
     takeNewPhoto = false;
   }
 
@@ -201,6 +204,15 @@ bool checkPhoto( fs::FS &fs ) {
   return ( pic_sz > 100 );
 }
 
+void deleteOldPhoto() {
+  // Delete the old photo file
+  if (SPIFFS.exists(FILE_PHOTO)) {
+    SPIFFS.remove(FILE_PHOTO);
+    Serial.println("Old photo file deleted");
+  }
+}
+
+
 // Capture Photo and Save it to SPIFFS
 void capturePhotoSaveSpiffs( void ) {
   camera_fb_t * fb = NULL; // pointer
@@ -215,6 +227,9 @@ void capturePhotoSaveSpiffs( void ) {
       Serial.println("Camera capture failed");
       return;
     }
+
+    // Delete the old photo file
+    deleteOldPhoto();
 
     // Photo file name
     Serial.printf("Picture file name: %s\n", FILE_PHOTO);
@@ -254,9 +269,6 @@ void sendPhotoToServer() {
     if (i < 5) macAddress += ":";
   }
   
-  // Specify the server address and endpoint
-  String url = String(serverAddress) + "/upload_base64";
-
   // Create an HTTP object
   HTTPClient http;
 
