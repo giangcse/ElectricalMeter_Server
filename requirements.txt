@@ -4,3 +4,8 @@ python-multipart
 python-dotenv
 paho-mqtt
 pymongo
+pillow
+opencv-python
+vietocr
+roboflow
+numpy

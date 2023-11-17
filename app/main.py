@@ -4,12 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from PIL import Image
+from io import BytesIO
+from app.reader import read_meter
 
 import pymongo
 import os
 import shutil
 import datetime
 import base64
+import random
 
 # Load .env
 dotenv_path = Path('.env')
@@ -44,6 +48,19 @@ class UploadModel(BaseModel):
     ip: str
     image: str
 
+def decode_base64_to_image(base64_string, output_file_path):
+    # Loại bỏ tiền tố 'data:image/png;base64,' từ base64 string (nếu có)
+    base64_string = base64_string.split(",")[-1]
+
+    # Giải mã base64 thành dữ liệu bytes
+    image_data = base64.b64decode(base64_string)
+
+    # Đọc hình ảnh từ dữ liệu bytes
+    image = Image.open(BytesIO(image_data))
+
+    # Lưu hình ảnh vào đường dẫn được chỉ định
+    image.save(output_file_path)
+
 # Upload endpoint
 @app.post('/upload')
 async def upload(file: UploadFile = File(...)):
@@ -63,8 +80,16 @@ async def upload(file: UploadFile = File(...)):
 # Upload endpoint
 @app.post('/upload_base64')
 async def upload(upload: UploadModel):
-    save_to_db = e_log.insert_one({'mac': upload.mac, 'ip': upload.ip, 'image': upload.image, 'createdAt': round(datetime.datetime.now().timestamp())})
+    # Save base64 to image
+    file_path = os.path.join('upload_folder', f'image_{random.randint(0, 999)}.jpg')
+
+    decode_base64_to_image(upload.image, file_path)
+
+    extracted_digits = read_meter(file_path)
+
+    save_to_db = e_log.insert_one({'mac': upload.mac, 'ip': upload.ip, 'image': upload.image, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
     if save_to_db.acknowledged:
+        os.remove(file_path)
         return JSONResponse(status_code=200, content="Uploaded")
     else:
         return JSONResponse(status_code=500, content="Database server error")
