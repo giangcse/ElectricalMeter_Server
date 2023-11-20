@@ -14,7 +14,7 @@
 #include <WiFiManager.h>
 #include <PubSubClient.h>
 
-const String url = "https://electrical-meter-server.onrender.com/upload_base64";
+const String url = "https://ec3b-113-161-196-10.ngrok-free.app/upload";
 const char* mqtt_server = "115.76.66.88";
 const int mqtt_port = 1883;
 const char* mqtt_user = "giang";
@@ -257,7 +257,6 @@ void capturePhotoSaveSpiffs( void ) {
 }
 
 void sendPhotoToServer() {
-
   // Get MAC address of the ESP32
   uint8_t mac[6];
   WiFi.macAddress(mac);
@@ -268,52 +267,19 @@ void sendPhotoToServer() {
     macAddress += String(mac[i], 16);
     if (i < 5) macAddress += ":";
   }
-  
-  // Create an HTTP object
   HTTPClient http;
-
-  // Begin the HTTP connection
   http.begin(url);
+  http.addHeader("Accept", "*/*");
 
-  // Open the photo file
-  File photoFile = SPIFFS.open("/photo.jpg", "r");
+  // Add IP and MAC address form data
+  http.POST("mac=" + macAddress);
 
-  // Check if the file is open
-  if (photoFile) {
-    // Get the file size
-    size_t fileSize = photoFile.size();
-
-    // Allocate a buffer to store the file content
-    uint8_t* fileBuffer = (uint8_t*)malloc(fileSize);
-
-    // Read the file content into the buffer
-    photoFile.read(fileBuffer, fileSize);
-
-    // Encode the file content as base64
-    String base64Image = base64::encode(fileBuffer, fileSize);
-
-    // Create a JSON payload
-    String payload = "{\"mac\":\"" + macAddress + "\",\"ip\":\"" + WiFi.localIP().toString().c_str() + "\",\"image\":\"" + base64Image + "\"}";
-
-    // Send the POST request with the JSON payload
-    int httpCode = http.POST(payload);
-
-    // Check the result of the HTTP request
-    if (httpCode > 0) {
-      Serial.printf("HTTP POST request sent, status code: %d\n", httpCode);
-    } else {
-      Serial.printf("HTTP POST request failed, error: %s\n", http.errorToString(httpCode).c_str());
-    }
-
-    // Free the buffer
-    free(fileBuffer);
-
-    // Close the file
-    photoFile.close();
-  } else {
-    Serial.println("Failed to open photo file");
+  // Read image file from SPIFFS and send it as form data
+  File imageFile = SPIFFS.open(FILE_PHOTO, "r");
+  if (imageFile) {
+    http.POST("image=@" + String(FILE_PHOTO));
+    imageFile.close();
   }
 
-  // End the HTTP connection
   http.end();
 }
