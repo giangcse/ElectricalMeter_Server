@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
@@ -63,14 +63,16 @@ def decode_base64_to_image(base64_string, output_file_path):
 
 # Upload endpoint
 @app.post('/upload')
-async def upload(file: UploadFile = File(...)):
-    file_path = os.path.join('upload_folder', file.filename)
+async def upload_file(image: UploadFile = File(...), ip: str = Form(...), mac: str = Form(...)):
+    file_path = os.path.join('upload_folder', image.filename)
     with open(file_path, 'wb') as f:
-        shutil.copyfileobj(file.file, f)
+        shutil.copyfileobj(image.file, f)
     
     with open(file_path, 'rb') as f:
         image_encode = base64.b64encode(f.read())
-    save_to_db = e_log.insert_one({'image': image_encode})
+    extracted_digits = read_meter(file_path)
+
+    save_to_db = e_log.insert_one({'mac': mac, 'ip': ip, 'image': image_encode, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
     if save_to_db.acknowledged:
         os.remove(file_path)
         return JSONResponse(status_code=200, content="Uploaded")
@@ -79,7 +81,7 @@ async def upload(file: UploadFile = File(...)):
     
 # Upload endpoint
 @app.post('/upload_base64')
-async def upload(upload: UploadModel):
+async def upload_base64(upload: UploadModel):
     # Save base64 to image
     file_path = os.path.join('upload_folder', f'image_{random.randint(0, 999)}.jpg')
 
