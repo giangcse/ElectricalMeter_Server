@@ -14,8 +14,8 @@
 #include <WiFiManager.h>
 #include <PubSubClient.h>
 
-const String url = "https://electrical-meter-server.onrender.com/upload_base64";
-const char* mqtt_server = "115.76.66.88";
+const String url = "https://30ac-113-161-196-10.ngrok-free.app/upload";
+const char* mqtt_server = "giangpt-hass.duckdns.org";
 const int mqtt_port = 1883;
 const char* mqtt_user = "giang";
 const char* mqtt_password = "giang";
