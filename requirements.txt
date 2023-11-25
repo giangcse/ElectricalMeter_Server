@@ -4,8 +4,8 @@ python-multipart
 python-dotenv
 paho-mqtt
 pymongo
-pillow
-opencv-python
-vietocr
+Pillow==9.5.0
+opencv-python==4.8.1.78
+vietocr==0.3.12
 roboflow
 numpy

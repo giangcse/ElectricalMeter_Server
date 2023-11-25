@@ -1,2 +1,3 @@
 __pycache__/
 .venv/
+models/vgg_seq2seq.pth

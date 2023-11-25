@@ -5,6 +5,7 @@ from vietocr.tool.config import Cfg
 
 import cv2
 import numpy as np
+import os
 
 rf = Roboflow(api_key="M79YvxlMJMm44JdTfBZ7")
 project = rf.workspace().project("mywatermeter")
@@ -12,7 +13,7 @@ model = project.version(1).model
 
 # VietOCR config
 config = Cfg.load_config_from_name('vgg_seq2seq')
-# config['weights'] = os.path.join(os.getcwd(), 'models/vgg_seq2seq.pth')
+config['weights'] = os.path.join(os.getcwd(), 'models/vgg_seq2seq.pth')
 config['cnn']['pretrained']=False
 config['device'] = 'cpu'
 detector = Predictor(config)
@@ -29,7 +30,6 @@ def read_meter(image_path: str) -> str:
     image = cv2.imread(image_path)
     cropped_img = image[y : y+h, x : x+w]
     
-    # pre_img = Image.fromarray(cropped_img)
     # Chuyển ảnh sang grayscale
     gray_image = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2GRAY)
     # Áp dụng ngưỡng (thresholding) để tách nền
@@ -37,7 +37,7 @@ def read_meter(image_path: str) -> str:
 
     # Loại bỏ các đối tượng nhỏ bằng cách tìm contours và xác định kích thước
     contours, _ = cv2.findContours(thresholded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    min_area = 0.5  # Điều chỉnh kích thước tối thiểu của đối tượng để loại bỏ
+    min_area = 0.0  # Điều chỉnh kích thước tối thiểu của đối tượng để loại bỏ
 
     # Tạo ảnh mask để loại bỏ đối tượneg nhỏ
     mask = np.ones_like(thresholded_image, dtype=np.uint8) * 255
@@ -50,5 +50,6 @@ def read_meter(image_path: str) -> str:
     digits = detector.predict(Image.fromarray(result_image))
     return str(digits)
 
-# if __name__=='__main__':
-#     result = read_meter("dongho.jpg")
+if __name__=='__main__':
+    result = read_meter("dongho.jpg")
+    print(result)
