@@ -63,7 +63,7 @@ def decode_base64_to_image(base64_string, output_file_path):
 
 # Upload endpoint
 @app.post('/upload')
-async def upload_file(image: UploadFile = File(...), ip: str = Form(...), mac: str = Form(...)):
+async def upload_file(image: UploadFile = File(...), mac: str = Form(...)):
     file_path = os.path.join('upload_folder', image.filename)
     with open(file_path, 'wb') as f:
         shutil.copyfileobj(image.file, f)
@@ -72,7 +72,7 @@ async def upload_file(image: UploadFile = File(...), ip: str = Form(...), mac: s
         image_encode = base64.b64encode(f.read())
     extracted_digits = read_meter(file_path)
 
-    save_to_db = e_log.insert_one({'mac': mac, 'ip': ip, 'image': image_encode, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
+    save_to_db = e_log.insert_one({'mac': mac, 'image': image_encode, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
     if save_to_db.acknowledged:
         os.remove(file_path)
         return JSONResponse(status_code=200, content="Uploaded")
