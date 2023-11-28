@@ -2,7 +2,7 @@ from roboflow import Roboflow
 from PIL import Image
 from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
-
+import time
 import cv2
 import numpy as np
 
@@ -50,5 +50,7 @@ def read_meter(image_path: str) -> str:
     digits = detector.predict(Image.fromarray(result_image))
     return str(digits)
 
-# if __name__=='__main__':
-#     result = read_meter("dongho.jpg")
+if __name__=='__main__':
+    start = time.time()
+    result = read_meter("dongho.jpg")
+    print(f"Raw value: {result}\nExecution time {time.time() - start}")
