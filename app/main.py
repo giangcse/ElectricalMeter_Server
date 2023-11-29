@@ -40,7 +40,7 @@ app.add_middleware(
 
 # Connect to MongoDB Atlas
 client = pymongo.MongoClient(f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_SERVER}/?retryWrites=true&w=majority")
-db = client['ElectricalMeter']
+db = client['ElectricalMeter_Reader']
 e_log = db['ChiSoDien']
 # Model for upload
 class UploadModel(BaseModel):
