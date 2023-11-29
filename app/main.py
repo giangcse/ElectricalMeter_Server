@@ -45,7 +45,6 @@ e_log = db['ChiSoDien']
 # Model for upload
 class UploadModel(BaseModel):
     mac: str
-    ip: str
     image: str
 
 def decode_base64_to_image(base64_string, output_file_path):
@@ -75,7 +74,7 @@ async def upload_file(image: UploadFile = File(...), mac: str = Form(...)):
     save_to_db = e_log.insert_one({'mac': mac, 'image': image_encode, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
     if save_to_db.acknowledged:
         os.remove(file_path)
-        return JSONResponse(status_code=200, content="Uploaded")
+        return JSONResponse(status_code=200, content={'mac': mac, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
     else:
         return JSONResponse(status_code=500, content="Database server error")
     
@@ -89,9 +88,9 @@ async def upload_base64(upload: UploadModel):
 
     extracted_digits = read_meter(file_path)
 
-    save_to_db = e_log.insert_one({'mac': upload.mac, 'ip': upload.ip, 'image': upload.image, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
+    save_to_db = e_log.insert_one({'mac': upload.mac, 'image': upload.image, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
     if save_to_db.acknowledged:
         os.remove(file_path)
-        return JSONResponse(status_code=200, content="Uploaded")
+        return JSONResponse(status_code=200, content={'mac': upload.mac, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
     else:
         return JSONResponse(status_code=500, content="Database server error")
