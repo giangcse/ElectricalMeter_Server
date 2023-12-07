@@ -11,3 +11,5 @@ roboflow
 numpy
 torch
 torchvision
+ultralytics
+easyocr
