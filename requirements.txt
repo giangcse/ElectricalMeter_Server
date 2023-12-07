@@ -9,3 +9,5 @@ opencv-python==4.8.1.78
 vietocr==0.3.12
 roboflow
 numpy
+torch
+torchvision
