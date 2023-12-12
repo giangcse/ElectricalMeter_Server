@@ -1,4 +1,3 @@
-from roboflow import Roboflow
 from PIL import Image
 from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
@@ -9,15 +8,22 @@ import os
 
 from ultralytics import YOLO
 from easyocr import Reader
+from pathlib import Path
+from dotenv import load_dotenv
+# Load .env
+dotenv_path = Path('.env')
+load_dotenv(dotenv_path=dotenv_path)
+YOLO_MODEL=os.getenv('YOLO_MODEL')
+OCR_MODEL=os.getenv('OCR_MODEL')
 
 # YOLO MODEL
-model = YOLO(model='models/best.pt')
+model = YOLO(model=YOLO_MODEL)
 
 # VietOCR config
 config = Cfg.load_config_from_name('vgg_seq2seq')
-config['weights'] = os.path.join(os.getcwd(), 'models/vgg_seq2seq.pth')
+config['weights'] = os.path.join(os.getcwd(), OCR_MODEL)
 config['cnn']['pretrained']=False
-config['device'] = 'cpu'
+config['device'] = 'cuda:0'
 detector = Predictor(config)
 
 # EasyOCR
