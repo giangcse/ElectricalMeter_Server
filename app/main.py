@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
@@ -40,11 +40,12 @@ app.add_middleware(
 
 # Connect to MongoDB Atlas
 client = pymongo.MongoClient(f"mongodb+srv://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_SERVER}/?retryWrites=true&w=majority")
-db = client['ElectricalMeter_Reader']
+db = client['ElectricalMeter']
 e_log = db['ChiSoDien']
 # Model for upload
 class UploadModel(BaseModel):
     mac: str
+    ip: str
     image: str
 
 def decode_base64_to_image(base64_string, output_file_path):
@@ -62,25 +63,23 @@ def decode_base64_to_image(base64_string, output_file_path):
 
 # Upload endpoint
 @app.post('/upload')
-async def upload_file(image: UploadFile = File(...), mac: str = Form(...)):
-    file_path = os.path.join('upload_folder', image.filename)
+async def upload(file: UploadFile = File(...)):
+    file_path = os.path.join('upload_folder', file.filename)
     with open(file_path, 'wb') as f:
-        shutil.copyfileobj(image.file, f)
+        shutil.copyfileobj(file.file, f)
     
     with open(file_path, 'rb') as f:
         image_encode = base64.b64encode(f.read())
-    extracted_digits = read_meter(file_path)
-
-    save_to_db = e_log.insert_one({'mac': mac, 'image': image_encode, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
+    save_to_db = e_log.insert_one({'image': image_encode})
     if save_to_db.acknowledged:
         os.remove(file_path)
-        return JSONResponse(status_code=200, content={'mac': mac, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
+        return JSONResponse(status_code=200, content="Uploaded")
     else:
         return JSONResponse(status_code=500, content="Database server error")
     
 # Upload endpoint
 @app.post('/upload_base64')
-async def upload_base64(upload: UploadModel):
+async def upload(upload: UploadModel):
     # Save base64 to image
     file_path = os.path.join('upload_folder', f'image_{random.randint(0, 999)}.jpg')
 
@@ -88,9 +87,9 @@ async def upload_base64(upload: UploadModel):
 
     extracted_digits = read_meter(file_path)
 
-    save_to_db = e_log.insert_one({'mac': upload.mac, 'image': upload.image, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
+    save_to_db = e_log.insert_one({'mac': upload.mac, 'ip': upload.ip, 'image': upload.image, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
     if save_to_db.acknowledged:
         os.remove(file_path)
-        return JSONResponse(status_code=200, content={'mac': upload.mac, 'raw_value': extracted_digits, 'createdAt': round(datetime.datetime.now().timestamp())})
+        return JSONResponse(status_code=200, content={'result': extracted_digits})
     else:
         return JSONResponse(status_code=500, content="Database server error")

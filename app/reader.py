@@ -60,6 +60,6 @@ def read_meter(image_path: str) -> str:
         digits = ''.join([x for x in result if x.isdigit()])
         return str(digits)
 
-if __name__=='__main__':
-    result = read_meter("IMG_5971.jpeg")
-    print(result)
+# if __name__=='__main__':
+#     result = read_meter("IMG_5971.jpeg")
+#     print(result)
